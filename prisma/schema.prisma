@@ -1,0 +1,103 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  startTime   String
+  endTime     String
+  location    String?
+  maxGroups   Int      @default(1)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  groups        EventGroup[]
+  registrations Registration[]
+
+  @@map("events")
+}
+
+model EventGroup {
+  id       String @id @default(cuid())
+  eventId  String
+  name     String
+  maxSeats Int    @default(50)
+
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrations Registration[]
+
+  @@map("event_groups")
+}
+
+model Registration {
+  id            String            @id @default(cuid())
+  eventId       String
+  groupId       String?
+  firstName     String
+  lastName      String
+  email         String
+  phone         String?
+  status        String @default("PENDING")
+  unsubscribeToken String         @unique @default(cuid())
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  event Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  group EventGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, email])
+  @@map("registrations")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("contact_messages")
+}
+
+model EmailLog {
+  id        String    @id @default(cuid())
+  to        String
+  subject   String
+  type      String
+  eventId   String?
+  sentAt    DateTime  @default(now())
+  success   Boolean   @default(true)
+  error     String?
+
+  @@map("email_logs")
+}
+
+// Note: SQLite doesn't support enums, so we use String fields with constraints
+// Valid RegistrationStatus values: PENDING, CONFIRMED, CANCELLED, WAITLIST
+// Valid EmailType values: CONFIRMATION, REMINDER_DAY_BEFORE, REMINDER_3_HOURS, CANCELLATION, ADMIN_NOTIFICATION
